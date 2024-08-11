@@ -1,3 +1,5 @@
 streamlit
 pydeck
 protobuf
+requests
+BeautifulSoup

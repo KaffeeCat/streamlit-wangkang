@@ -4,6 +4,8 @@ import altair as alt
 import numpy as np
 import pandas as pd
 import os
+import requests
+from bs4 import BeautifulSoup
 
 dict_tag_mapping = {
     "gre": "GRE",
@@ -25,6 +27,33 @@ dict_exchange_mapping = {
     "t:": "最高级：",
     "s:": "名词复数形式："
 }
+
+def fetch_thumbnail_url(query):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    search_url = f'https://www.bing.com/images/search?q={query}'
+    response = requests.get(search_url, headers=headers)
+    
+    if response.status_code != 200:
+        print("Failed to fetch search results")
+        return None
+
+    soup = BeautifulSoup(response.text, 'html.parser')
+    image_element = soup.find('img', class_='mimg')
+    
+    if image_element and image_element.has_attr('src'):
+        return image_element['src']
+    
+    # Try to find the image URL in the data-murl attribute if src is not available
+    image_element = soup.find('a', class_='iusc')
+    if image_element and 'm' in image_element.attrs:
+        m_url = image_element['m']
+        match = re.search(r'"murl":"(.*?)"', m_url)
+        if match:
+            return match.group(1)
+    
+    return None
 
 def search_prefix(df, word):
     return df[df['word'].str.startswith(word, na=False)]
@@ -80,7 +109,12 @@ if text_input:
     df = df.head(10)
 
     for _, row in df.iterrows():
-        st.subheader(row['word'])
+
+        word = row['word']
+        st.subheader(word)
+        image_url = fetch_thumbnail_url(word)
+        if image_url is not None:
+            st.image(image_url)
         st.caption(f"- 发音：[{row['phonetic']}]")
         st.caption(f"- 中译：{row['translation'].replace('\\n', '; ')}")
         st.caption(f"- 英译：{row['definition'].replace('\\n', '; ')}")
@@ -94,5 +128,7 @@ if text_input:
                 exchange_str = exchange_str.replace(key, value)
             st.caption(f"- {'; '.join(exchange_str.split('/'))}")
 
-st.divider()
+        st.divider()
+
+
 st.caption(":email: 173163933@qq.com ***(Wang Kang)***")
