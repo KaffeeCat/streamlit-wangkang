@@ -8,6 +8,21 @@ import requests
 from bs4 import BeautifulSoup
 import re
 
+# Hide the deploy menu
+# https://discuss.streamlit.io/t/hide-deploy-and-streamlit-mainmenu/52433
+st.set_page_config(page_title="Page Title", layout="wide")
+st.markdown("""
+    <style>
+        .reportview-container {
+            margin-top: -2em;
+        }
+        #MainMenu {visibility: hidden;}
+        .stDeployButton {display:none;}
+        footer {visibility: hidden;}
+        #stDecoration {display:none;}
+    </style>
+""", unsafe_allow_html=True)
+
 dict_tag_mapping = {
     "gre": "GRE",
     "toefl": "托福",
