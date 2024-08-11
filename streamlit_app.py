@@ -72,7 +72,11 @@ if text_input:
             df = search_prefix(data, text_input[:-1])
 
     # 如果结果太多，则只展示前10个单词
-    st.caption(f"共找到 {len(df)} 个相关单词，以下为前10个单词：")
+    num = len(df)
+    msg = f"共找到 {num} 个相关单词"
+    if len(df) > 10:
+        msg += "，以下为前10个单词："
+    st.caption(msg)
     df = df.head(10)
 
     for _, row in df.iterrows():
