@@ -2,4 +2,4 @@ streamlit
 pydeck
 protobuf
 requests
-BeautifulSoup
+beautifulsoup4

@@ -6,6 +6,7 @@ import pandas as pd
 import os
 import requests
 from bs4 import BeautifulSoup
+import re
 
 dict_tag_mapping = {
     "gre": "GRE",
