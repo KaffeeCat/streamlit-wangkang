@@ -1,46 +1,94 @@
 import streamlit as st
 import pydeck as pdk
+import altair as alt
 import numpy as np
 import pandas as pd
 import os
 
-st.sidebar.title("Kang Studio")
-st.sidebar.write(
-    "Let's start building! For help and inspiration, head over to [docs.streamlit.io](https://docs.streamlit.io/)."
-)
+dict_tag_mapping = {
+    "gre": "GRE",
+    "toefl": "托福",
+    "cet6": "六级",
+    "ielts": "雅思",
+    "ky": "考研",
+    "cet4": "四级",
+    "gk": "高考",
+    "zk": "中考"
+}
 
-chart_data = pd.DataFrame(
-    np.random.randn(1000, 2) / [50, 50] + [37.76, -122.4],
-    columns=["lat", "lon"],
-)
+dict_exchange_mapping = {
+    "p:": "过去式：",
+    "d:": "过去分词：",
+    "i:": "现在分词：",
+    "3:": "第三人称单数：",
+    "r:": "比较级：",
+    "t:": "最高级：",
+    "s:": "名词复数形式："
+}
 
-st.pydeck_chart(
-    pdk.Deck(
-        map_style=None,
-        initial_view_state=pdk.ViewState(
-            latitude=37.76,
-            longitude=-122.4,
-            zoom=11,
-            pitch=50,
-        ),
-        layers=[
-            pdk.Layer(
-                "HexagonLayer",
-                data=chart_data,
-                get_position="[lon, lat]",
-                radius=200,
-                elevation_scale=4,
-                elevation_range=[0, 1000],
-                pickable=True,
-                extruded=True,
-            ),
-            pdk.Layer(
-                "ScatterplotLayer",
-                data=chart_data,
-                get_position="[lon, lat]",
-                get_color="[200, 30, 0, 160]",
-                get_radius=200,
-            ),
-        ],
-    )
-)
+def search_prefix(df, word):
+    return df[df['word'].str.startswith(word, na=False)]
+
+def search_suffix(df, word):
+    return df[df['word'].str.endswith(word, na=False)]
+
+def search_contain(df, word):
+    return df[df['word'].str.contains(word, na=False)]
+
+def search_match(df, word):
+    return df[df['word'].str.lower() == word.lower()]
+
+# LOAD DATA ONCE
+@st.cache_resource
+def load_data():
+    path = "./data/kdict.csv"
+    data = pd.read_csv(path)
+    return data
+
+data = load_data()
+
+st.title("KMind词典")
+st.subheader(":rainbow[超级联想思维英语学习]")
+st.write("解锁单词学习的终极工具！KMind英语词典通过词汇的联想关联，构建同前缀/后缀/关键词单词之前的新桥梁，让学习英语更加有趣。提升词汇量，从未如此轻松有趣。")
+st.caption("可以使用\"-\"符号来查询前缀与后缀，例如：-tion可以查询tion结尾的单词，like-可以查询like开头的单词。")
+st.divider()
+
+text_input = st.text_input("Hi, 请在这里输入单词 💁‍♂️", "apple")
+
+if text_input:
+
+    if '-' not in text_input:
+        df = search_contain(data, text_input)
+
+        # 检查是否存在与text_input完全匹配的单词，如果有，则移动到首行
+        if (df['word'] == text_input).any():
+            matching_rows = df[df['word'] == text_input]
+            non_matching_rows = df[df['word'] != text_input]
+            df = pd.concat([matching_rows, non_matching_rows], ignore_index=True)
+    else:
+        if text_input.startswith("-"):
+            df = search_suffix(data, text_input[1:])
+        elif text_input.endswith("-"):
+            df = search_prefix(data, text_input[:-1])
+
+    # 如果结果太多，则只展示前10个单词
+    st.caption(f"共找到 {len(df)} 个相关单词，以下为前10个单词：")
+    df = df.head(10)
+
+    for _, row in df.iterrows():
+        st.subheader(row['word'])
+        st.caption(f"- 发音：[{row['phonetic']}]")
+        st.caption(f"- 中译：{row['translation'].replace('\\n', '; ')}")
+        st.caption(f"- 英译：{row['definition'].replace('\\n', '; ')}")
+
+        translated_tags = '/'.join(dict_tag_mapping.get(tag, tag) for tag in row['tag'].split())
+        st.caption(f"- 考纲：{translated_tags}")
+
+        if not pd.isna(row['exchange']):
+            exchange_str = row['exchange']
+            for key, value in dict_exchange_mapping.items():
+                exchange_str = exchange_str.replace(key, value)
+            st.caption(f"- {'; '.join(exchange_str.split('/'))}")
+
+st.divider()
+st.caption(":email: 173163933@qq.com ***(Wang Kang)***")
