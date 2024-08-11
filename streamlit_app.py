@@ -10,7 +10,7 @@ import re
 
 # Hide the deploy menu
 # https://discuss.streamlit.io/t/hide-deploy-and-streamlit-mainmenu/52433
-st.set_page_config(page_title="Page Title", layout="wide")
+st.set_page_config(page_title="KMind中英词典")
 st.markdown("""
     <style>
         .reportview-container {
@@ -45,6 +45,7 @@ dict_exchange_mapping = {
     "s:": "名词复数形式："
 }
 
+# 从Bing搜索图片
 def fetch_thumbnail_url(query):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
@@ -72,6 +73,10 @@ def fetch_thumbnail_url(query):
     
     return None
 
+# 使用正则表达式匹配中文字符
+def contains_chinese(text):
+    return bool(re.search(r'[\u4e00-\u9fff]', text))
+
 def search_prefix(df, word):
     return df[df['word'].str.startswith(word, na=False)]
 
@@ -93,17 +98,19 @@ def load_data():
 
 data = load_data()
 
-st.title("KMind词典")
+st.title("KMind中英词典")
 st.subheader(":rainbow[超级联想思维英语学习]")
-st.write("解锁单词学习的终极工具！KMind英语词典通过词汇的联想关联，构建同前缀/后缀/关键词单词之前的新桥梁，让学习英语更加有趣。提升词汇量，从未如此轻松有趣。")
+st.write("解锁单词学习的终极工具！KMind中英词典通过词汇的联想关联，构建同前缀/后缀/关键词单词之前的新桥梁，让学习英语更加有趣。提升词汇量，从未如此轻松有趣。")
 st.caption("可以使用\"-\"符号来查询前缀与后缀，例如：-tion可以查询tion结尾的单词，like-可以查询like开头的单词。")
 st.divider()
 
-text_input = st.text_input("Hi, 请在这里输入单词 💁‍♂️", "apple")
+text_input = st.text_input("Hi, 请在这里输入中英文单词 💁‍♂️", "play")
 
 if text_input:
 
-    if '-' not in text_input:
+    if contains_chinese(text_input):
+        df = data[data['translation'].str.contains(text_input, na=False)]
+    elif '-' not in text_input:
         df = search_contain(data, text_input)
 
         # 检查是否存在与text_input完全匹配的单词，如果有，则移动到首行
