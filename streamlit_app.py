@@ -108,21 +108,27 @@ text_input = st.text_input("Hi, 请在这里输入中英文单词 💁‍♂️"
 
 if text_input:
 
-    if contains_chinese(text_input):
+    is_chinese = contains_chinese(text_input)
+    if is_chinese:
         df = data[data['translation'].str.contains(text_input, na=False)]
     elif '-' not in text_input:
         df = search_contain(data, text_input)
-
-        # 检查是否存在与text_input完全匹配的单词，如果有，则移动到首行
-        if (df['word'] == text_input).any():
-            matching_rows = df[df['word'] == text_input]
-            non_matching_rows = df[df['word'] != text_input]
-            df = pd.concat([matching_rows, non_matching_rows], ignore_index=True)
     else:
         if text_input.startswith("-"):
-            df = search_suffix(data, text_input[1:])
+            text_input = text_input[1:]
+            df = search_suffix(data, text_input)
         elif text_input.endswith("-"):
-            df = search_prefix(data, text_input[:-1])
+            text_input = text_input[:-1]
+            df = search_prefix(data, text_input)
+
+    # 根据词频的高低排序
+    df = df.sort_values(by='frq', ascending=True)
+    
+    # 检查是否存在与text_input完全匹配的单词，如果有，则移动到首行
+    if is_chinese is False and (df['word'] == text_input).any():
+        matching_rows = df[df['word'] == text_input]
+        non_matching_rows = df[df['word'] != text_input]
+        df = pd.concat([matching_rows, non_matching_rows], ignore_index=True)
 
     # 如果结果太多，则只展示前10个单词
     num = len(df)
@@ -135,13 +141,25 @@ if text_input:
     for _, row in df.iterrows():
 
         word = row['word']
-        st.subheader(word)
+
+        # Show the word
+        word_display = word
+        word_tranlation = row['translation'].replace('\\n', '; ')
+        if is_chinese:
+            word_tranlation = word_tranlation.replace(text_input, f":blue[{text_input}]")
+        else:
+            word_display = word.replace(text_input, f":blue[{text_input}]")
+        st.subheader(word_display)
+
+        # Search & show image
         image_url = fetch_thumbnail_url(word)
         if image_url is not None:
             st.image(image_url)
+
         st.caption(f"- 发音：[{row['phonetic']}]")
-        st.caption(f"- 中译：{row['translation'].replace('\\n', '; ')}")
+        st.caption(f"- 中译：{word_tranlation}")
         st.caption(f"- 英译：{row['definition'].replace('\\n', '; ')}")
+        #st.caption(f"- 词频：[{row['frq']}]")
 
         translated_tags = '/'.join(dict_tag_mapping.get(tag, tag) for tag in row['tag'].split())
         st.caption(f"- 考纲：{translated_tags}")
