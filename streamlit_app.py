@@ -1,12 +1,11 @@
 import streamlit as st
-import pydeck as pdk
-import altair as alt
-import numpy as np
 import pandas as pd
-import os
 import requests
 from bs4 import BeautifulSoup
 import re
+
+from tts import TextToSpeech
+txt2speech = TextToSpeech()
 
 # Hide the deploy menu
 # https://discuss.streamlit.io/t/hide-deploy-and-streamlit-mainmenu/52433
@@ -150,6 +149,12 @@ if text_input:
         else:
             word_display = word.replace(text_input, f":blue[{text_input}]")
         st.subheader(word_display)
+
+        # Show the TTS button
+        txt2speech.convert(text=word)
+        with open('hello.mp3', 'rb') as audio_file:
+            audio_bytes = audio_file.read()
+        st.audio(audio_bytes, format='audio/mp3')
 
         # Search & show image
         image_url = fetch_thumbnail_url(word)
