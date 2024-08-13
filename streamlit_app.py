@@ -3,9 +3,9 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import re
-
-from tts import TextToSpeech
-txt2speech = TextToSpeech()
+import subprocess
+import platform
+linux = platform.system() == 'Linux'
 
 # Hide the deploy menu
 # https://discuss.streamlit.io/t/hide-deploy-and-streamlit-mainmenu/52433
@@ -49,7 +49,8 @@ def fetch_thumbnail_url(query):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
-    search_url = f'https://www.bing.com/images/search?q={query}'
+    search_url = f'https://www.bing.com/images/search?q={query}%20image'
+    #search_url = f'https://www.bing.com/images/search?q={query}&qft=+filterui:photo-clipart&form=IRFLTR&first=1'
     response = requests.get(search_url, headers=headers)
     
     if response.status_code != 200:
@@ -77,16 +78,22 @@ def contains_chinese(text):
     return bool(re.search(r'[\u4e00-\u9fff]', text))
 
 def search_prefix(df, word):
-    return df[df['word'].str.startswith(word, na=False)]
+    return df[df['word'].str.startswith(word, case=False, na=False)]
 
 def search_suffix(df, word):
-    return df[df['word'].str.endswith(word, na=False)]
+    return df[df['word'].str.endswith(word, case=False, na=False)]
 
 def search_contain(df, word):
-    return df[df['word'].str.contains(word, na=False)]
+    return df[df['word'].str.contains(word, case=False, na=False)]
 
 def search_match(df, word):
     return df[df['word'].str.lower() == word.lower()]
+
+# 替换函数，忽略大小写
+def replace_ignore_case(word, text_input, replacement):
+    # 使用正则表达式进行忽略大小写的替换
+    pattern = re.compile(re.escape(text_input), re.IGNORECASE)
+    return pattern.sub(replacement, word)
 
 # LOAD DATA ONCE
 @st.cache_resource
@@ -124,10 +131,12 @@ if text_input:
     df = df.sort_values(by='frq', ascending=True)
     
     # 检查是否存在与text_input完全匹配的单词，如果有，则移动到首行
-    if is_chinese is False and (df['word'] == text_input).any():
-        matching_rows = df[df['word'] == text_input]
-        non_matching_rows = df[df['word'] != text_input]
-        df = pd.concat([matching_rows, non_matching_rows], ignore_index=True)
+    if is_chinese is False:
+        match_rows = df['word'].str.lower() == text_input.lower()
+        if match_rows.any():
+            matches = df[match_rows]
+            unmatches = df[df['word'].str.lower() != text_input.lower()]
+            df = pd.concat([matches, unmatches], ignore_index=True)
 
     # 如果结果太多，则只展示前10个单词
     num = len(df)
@@ -140,40 +149,42 @@ if text_input:
     for _, row in df.iterrows():
 
         word = row['word']
-
+        
         # Show the word
         word_display = word
         word_tranlation = row['translation'].replace('\\n', '; ')
         if is_chinese:
             word_tranlation = word_tranlation.replace(text_input, f":blue[{text_input}]")
         else:
-            word_display = word.replace(text_input, f":blue[{text_input}]")
-        st.subheader(word_display)
+            word_display = replace_ignore_case(word, text_input, f":blue[{text_input}]")
+        #st.subheader(word_display)
+        st.title(word_display)
 
-        # Show the TTS button
-        txt2speech.convert(text=word)
-        with open('hello.mp3', 'rb') as audio_file:
-            audio_bytes = audio_file.read()
-        st.audio(audio_bytes, format='audio/mp3')
+        if linux:
+            # 使用 espeak 生成语音并保存为 wav 文件
+            subprocess.run(['espeak', word, '--stdout'], stdout=open('audio.wav', 'wb'))
+
+            # 使用 Streamlit 播放 hello.wav 文件
+            st.audio('audio.wav', format='audio/wav')
 
         # Search & show image
         image_url = fetch_thumbnail_url(word)
         if image_url is not None:
             st.image(image_url)
-
-        st.caption(f"- 发音：[{row['phonetic']}]")
-        st.caption(f"- 中译：{word_tranlation}")
-        st.caption(f"- 英译：{row['definition'].replace('\\n', '; ')}")
+        
+        st.write(f"[{row['phonetic']}]")
+        st.write(f"{word_tranlation}")
+        st.write(f"{row['definition'].replace('\\n', '; ')}")
         #st.caption(f"- 词频：[{row['frq']}]")
 
         translated_tags = '/'.join(dict_tag_mapping.get(tag, tag) for tag in row['tag'].split())
-        st.caption(f"- 考纲：{translated_tags}")
+        st.caption(f"{translated_tags}")
 
         if not pd.isna(row['exchange']):
             exchange_str = row['exchange']
             for key, value in dict_exchange_mapping.items():
                 exchange_str = exchange_str.replace(key, value)
-            st.caption(f"- {'; '.join(exchange_str.split('/'))}")
+            st.caption(f"{'; '.join(exchange_str.split('/'))}")
 
         st.divider()
 

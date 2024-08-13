@@ -3,4 +3,3 @@ pydeck
 protobuf
 requests
 beautifulsoup4
-pyttsx3
