@@ -49,7 +49,7 @@ def fetch_thumbnail_url(query):
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
     }
-    search_url = f'https://www.bing.com/images/search?q={query}%20image'
+    search_url = f'https://www.bing.com/images/search?q={query}'
     #search_url = f'https://www.bing.com/images/search?q={query}&qft=+filterui:photo-clipart&form=IRFLTR&first=1'
     response = requests.get(search_url, headers=headers)
     
@@ -78,10 +78,12 @@ def contains_chinese(text):
     return bool(re.search(r'[\u4e00-\u9fff]', text))
 
 def search_prefix(df, word):
-    return df[df['word'].str.startswith(word, case=False, na=False)]
+    pattern = re.compile(f'^({word})', re.IGNORECASE)
+    return df[df['word'].str.contains(pattern, na=False)]
 
 def search_suffix(df, word):
-    return df[df['word'].str.endswith(word, case=False, na=False)]
+    pattern = re.compile(f'({word})$', re.IGNORECASE)
+    return df[df['word'].str.contains(pattern, na=False)]
 
 def search_contain(df, word):
     return df[df['word'].str.contains(word, case=False, na=False)]
@@ -89,11 +91,35 @@ def search_contain(df, word):
 def search_match(df, word):
     return df[df['word'].str.lower() == word.lower()]
 
+# 使用正则进行模糊匹配
+def search_fusion(df, word):
+    _df = df[df['word'].str.len() == len(word)]
+    pattern = re.compile(f'^{word.replace('*', '.*')}$')
+    return _df[_df['word'].str.contains(pattern, regex=True, na=False)]
+
 # 替换函数，忽略大小写
 def replace_ignore_case(word, text_input, replacement):
     # 使用正则表达式进行忽略大小写的替换
     pattern = re.compile(re.escape(text_input), re.IGNORECASE)
     return pattern.sub(replacement, word)
+
+# 对句子中的关键词进行高亮
+def highlight_text(text, keyword, prefix=':blue[', suffix=']'):
+    # 将两个字符串转换为小写
+    _text = text.lower()
+    _keyword = keyword.lower()
+
+    # 找到子字符串的起始位置
+    start_idx = _text.find(_keyword)
+    if start_idx == -1:
+        return text
+    
+    # 计算子字符串的结束位置
+    end_idx = start_idx + len(_keyword)
+
+    # 在子字符串前后加上符号
+    output = text[:start_idx] + prefix + text[start_idx:end_idx] + ']' + text[end_idx:]
+    return output
 
 # LOAD DATA ONCE
 @st.cache_resource
@@ -107,7 +133,9 @@ data = load_data()
 st.title("KMind中英词典")
 st.subheader(":rainbow[超级联想思维英语学习]")
 st.write("解锁单词学习的终极工具！KMind中英词典通过词汇的联想关联，构建同前缀/后缀/关键词单词之前的新桥梁，让学习英语更加有趣。提升词汇量，从未如此轻松有趣。")
-st.caption("可以使用\"-\"符号来查询前缀与后缀，例如：-tion可以查询tion结尾的单词，like-可以查询like开头的单词。")
+st.markdown("● **:red[前缀查询法]: trans-** 可以查询到transformation, transition, tranfer, transistor等。")
+st.markdown("● **:orange[后缀查询法]: -tion** 可以查询到information, formation, transformation等。")
+st.markdown("● **:green[模糊匹配法]: \*ight** 可以查询搜索到might, right, night, light等。")
 st.divider()
 
 text_input = st.text_input("Hi, 请在这里输入中英文单词 💁‍♂️", "play")
@@ -117,6 +145,8 @@ if text_input:
     is_chinese = contains_chinese(text_input)
     if is_chinese:
         df = data[data['translation'].str.contains(text_input, na=False)]
+    elif '*' in text_input:
+        df = search_fusion(data, text_input)
     elif '-' not in text_input:
         df = search_contain(data, text_input)
     else:
@@ -154,10 +184,9 @@ if text_input:
         word_display = word
         word_tranlation = row['translation'].replace('\\n', '; ')
         if is_chinese:
-            word_tranlation = word_tranlation.replace(text_input, f":blue[{text_input}]")
+            word_tranlation = highlight_text(word_tranlation, text_input)
         else:
-            word_display = replace_ignore_case(word, text_input, f":blue[{text_input}]")
-        #st.subheader(word_display)
+            word_display = highlight_text(word, text_input)
         st.title(word_display)
 
         if linux:
