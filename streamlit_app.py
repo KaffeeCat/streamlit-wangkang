@@ -93,8 +93,9 @@ def search_match(df, word):
 
 # 使用正则进行模糊匹配
 def search_fusion(df, word):
+    _word = word.replace('*', '.*')
     _df = df[df['word'].str.len() == len(word)]
-    pattern = re.compile(f'^{word.replace('*', '.*')}$')
+    pattern = re.compile(f'^{_word}$', re.IGNORECASE)
     return _df[_df['word'].str.contains(pattern, regex=True, na=False)]
 
 # 替换函数，忽略大小写
@@ -130,12 +131,20 @@ def load_data():
 
 data = load_data()
 
+st.sidebar.title("Subscribe me ! 😀")
+st.sidebar.write("快速保存为书签，方便随时查询。")
+st.sidebar.caption("- 在微信上，您可以点击右上角$\cdots$按钮，再点击**浮窗**按钮，保存为书签。")
+st.sidebar.image("./data/subscribe_wx.png")
+st.sidebar.divider()
+st.sidebar.caption("- 在浏览器中，您可以点击菜单按钮，再点击**添加到主屏幕**，保存为书签。")
+st.sidebar.image("./data/subscribe_web.png")
+
 st.title("KMind中英词典")
 st.subheader(":rainbow[超级联想思维英语学习]")
 st.write("解锁单词学习的终极工具！KMind中英词典通过词汇的联想关联，构建同前缀/后缀/关键词单词之前的新桥梁，让学习英语更加有趣。提升词汇量，从未如此轻松有趣。")
-st.markdown("● **:red[前缀查询法]: trans-** 可以查询到transformation, transition, tranfer, transistor等。")
-st.markdown("● **:orange[后缀查询法]: -tion** 可以查询到information, formation, transformation等。")
-st.markdown("● **:green[模糊匹配法]: \*ight** 可以查询搜索到might, right, night, light等。")
+st.caption("● **:red[前缀查询法]: trans-** 可以查询到transformation, transition, tranfer, transistor等。")
+st.caption("● **:orange[后缀查询法]: -tion** 可以查询到information, formation, transformation等。")
+st.caption("● **:green[模糊匹配法]: \*ight** 可以查询搜索到might, right, night, light等。")
 st.divider()
 
 text_input = st.text_input("Hi, 请在这里输入中英文单词 💁‍♂️", "play")
@@ -203,7 +212,10 @@ if text_input:
         
         st.write(f"[{row['phonetic']}]")
         st.write(f"{word_tranlation}")
-        st.write(f"{row['definition'].replace('\\n', '; ')}")
+
+        if isinstance(row['definition'], str):
+            st.write(f"{row['definition'].replace('\\n', '; ')}")
+
         #st.caption(f"- 词频：[{row['frq']}]")
 
         translated_tags = '/'.join(dict_tag_mapping.get(tag, tag) for tag in row['tag'].split())
