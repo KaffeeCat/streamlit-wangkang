@@ -9,7 +9,7 @@ linux = platform.system() == 'Linux'
 
 # Hide the deploy menu
 # https://discuss.streamlit.io/t/hide-deploy-and-streamlit-mainmenu/52433
-st.set_page_config(page_title="KMind中英词典")
+st.set_page_config(page_title="闪电词典")
 st.markdown("""
     <style>
         .reportview-container {
@@ -139,9 +139,9 @@ st.sidebar.divider()
 st.sidebar.caption("- 在浏览器中，您可以点击菜单按钮，再点击**添加到主屏幕**，保存为书签。")
 st.sidebar.image("./data/subscribe_web.png")
 
-st.title("KMind中英词典")
+st.title("闪电词典:zap:")
 st.subheader(":rainbow[超级联想思维英语学习]")
-st.write("解锁单词学习的终极工具！KMind中英词典通过词汇的联想关联，构建同前缀/后缀/关键词单词之前的新桥梁，让学习英语更加有趣。提升词汇量，从未如此轻松有趣。")
+st.write("解锁单词学习的终极工具！通过词汇的前缀/后缀/模糊查询，构建单词联想的新桥梁，让学习英语更加有趣。提升词汇量，从未如此轻松有趣。")
 st.caption("● **:red[前缀查询法]: trans-** 可以查询到transformation, transition, tranfer, transistor等。")
 st.caption("● **:orange[后缀查询法]: -tion** 可以查询到information, formation, transformation等。")
 st.caption("● **:green[模糊匹配法]: \*ight** 可以查询搜索到might, right, night, light等。")
