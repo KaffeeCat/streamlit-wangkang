@@ -180,10 +180,15 @@ if text_input:
     # 如果结果太多，则只展示前10个单词
     num = len(df)
     msg = f"共找到 {num} 个相关单词"
-    if len(df) > 10:
+    df['translation'] = df['translation'].str.replace('\\n', '; ')
+    _df = pd.DataFrame({'单词': df['word'], '翻译': df['translation']})
+    _df = _df.sort_values(by='单词')
+    st.dataframe(_df, hide_index=True, use_container_width=True)
+
+    df = df.head(10)
+    if num > 10:
         msg += "，以下为前10个单词："
     st.caption(msg)
-    df = df.head(10)
 
     for _, row in df.iterrows():
 
@@ -191,7 +196,7 @@ if text_input:
         
         # Show the word
         word_display = word
-        word_tranlation = row['translation'].replace('\\n', '; ')
+        word_tranlation = row['translation']
         if is_chinese:
             word_tranlation = highlight_text(word_tranlation, text_input)
         else:
